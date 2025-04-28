@@ -1,7 +1,5 @@
 # Dietary Environmental Impact Visualization
 
-![Example Output](diet_comparison_static.png)
-
 This project creates interactive radar chart visualizations comparing the environmental impacts of different dietary patterns using Python.
 
 ## Features
