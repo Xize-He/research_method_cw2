@@ -152,3 +152,98 @@ ani = animation.FuncAnimation(
 )
 ani.save("diet_comparison_animated.mp4", writer="ffmpeg", dpi=150, fps=0.5)
 plt.close()
+
+# ==============================================
+# 3. New Animation: Two Charts Moving from Sides to Center and Overlapping Transparently with Pause
+# ==============================================
+fig = plt.figure(figsize=(18, 10))
+
+# Create two axes with initial positions far apart
+ax_left = fig.add_subplot(111, polar=True)
+ax_right = fig.add_subplot(111, polar=True, sharex=ax_left, sharey=ax_left)
+
+# Initial positions
+ax_left.set_position([0.05, 0.1, 0.4, 0.8])  # Left side
+ax_right.set_position([0.55, 0.1, 0.4, 0.8])  # Right side
+
+def update_position(frame):
+    # Clear both axes
+    ax_left.clear()
+    ax_right.clear()
+    
+    # Total frames: 31 for movement + 20 for pause = 51 frames
+    # Movement phase: 0 to 30 (progress 0 to 1)
+    # Pause phase: 31 to 50 (progress stays at 1)
+    if frame <= 30:
+        progress = frame / 30.0  # Movement phase
+    else:
+        progress = 1.0  # Pause phase
+    
+    # Left chart (Real-world Impact)
+    for i, diet in enumerate(diet_groups):
+        values = grouped_noadjust_scaled.loc[diet].values.flatten().tolist()
+        values += values[:1]
+        ax_left.plot(angles, values, color=colors[i], linewidth=2, label=diet)
+        ax_left.fill(angles, values, color=colors[i], alpha=0.2)  # Keep transparency
+    
+    # Right chart (Efficiency) - drawn with transparency
+    for i, diet in enumerate(diet_groups):
+        values = grouped_adjusted_scaled.loc[diet].values.flatten().tolist()
+        values += values[:1]
+        ax_right.plot(angles, values, color=colors[i], linewidth=2, label=diet)
+        ax_right.fill(angles, values, color=colors[i], alpha=0.2)  # Keep transparency
+    
+    # Set up axes
+    for ax in [ax_left, ax_right]:
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(indicators, fontsize=10)
+        ax.set_ylim(0, 1.1)
+    
+    # Move charts toward center
+    left_x = 0.05 + (0.25 * progress)  # Move from 0.05 to 0.3
+    right_x = 0.55 - (0.25 * progress)  # Move from 0.55 to 0.3
+    chart_width = 0.4
+    
+    ax_left.set_position([left_x, 0.1, chart_width, 0.8])
+    ax_right.set_position([right_x, 0.1, chart_width, 0.8])
+    
+    # Update titles based on progress
+    if progress < 1.0:
+        ax_left.set_title("Real-world Impact", fontsize=16, pad=20)
+        ax_right.set_title("Efficiency (kcal-Adjusted)", fontsize=16, pad=20)
+    else:
+        ax_left.set_title("Combined Impact (Real-world)", fontsize=16, pad=20)
+        ax_right.set_title("Combined Impact (Efficiency)", fontsize=16, pad=20)
+    
+    # Add legend only once
+    if frame == 0:
+        fig.legend(
+            handles=[plt.Line2D([0], [0], color=colors[i], lw=4, label=diet) 
+                    for i, diet in enumerate(diet_groups)],
+            title="Diet Group",
+            loc='lower center',
+            bbox_to_anchor=(0.5, -0.15),
+            ncol=3,
+            fontsize=12,
+            title_fontsize=14
+        )
+    
+    # Ensure both axes remain visible when overlapped
+    ax_left.set_zorder(1)  # Real-world Impact in front
+    ax_right.set_zorder(0)  # Efficiency behind
+    ax_left.patch.set_alpha(0)  # Make background transparent
+    ax_right.patch.set_alpha(0)  # Make background transparent
+    
+    return [ax_left, ax_right]
+
+# Create and save new animation
+ani_move = animation.FuncAnimation(
+    fig,
+    update_position,
+    frames=51,  # 31 frames for movement + 20 frames for 2-second pause
+    interval=100,  # 100ms per frame, total ~5 seconds (3s move + 2s pause)
+    blit=False
+)
+
+ani_move.save("diet_comparison_move_to_center.mp4", writer="ffmpeg", dpi=150)
+plt.close()
